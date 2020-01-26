@@ -15,9 +15,26 @@ if (!empty($_POST)) {
 	if ($_POST['password'] === '') {
 		$error['password'] = 'blank';
 	}
-	
+	// アップされたファイルのファイル名
+	$fileName = $_FILES['image']['name'];
+	if (!empty($fileName)) {
+		// ファイル名の後ろ3文字(=拡張子)を取得
+		$ext = substr($fileName, -3);
+		if ($ext != 'jpg' && $ext != 'gif' && $ext != 'png') {
+			$error['image'] = 'type';
+		}
+	}
+
 	if (empty($error)) {
+		// ex) '20200124092323' . 'myface.png'
+		// 	日付入りのファイル名にすることで、重複を防ぐ
+		$image = date('YmdHis') . $_FILES['image']['name'];
+		// ['tmp_/name'] => 一時的にアップされている場所
+		// 第一引数=>今ある場所、第二引数=>移動先フォルダ・ファイル名
+		move_uploaded_file($_FILES['image']['tmp_name'], '../member_picture/' . $image);
+
 		$_SESSION['join'] = $_POST;
+		$_SESSION['join']['image'] = $image;
 		header('Location: check.php');
 		exit();
 	}	
@@ -74,9 +91,15 @@ if ($_REQUEST['action'] === 'rewrite' && isset($_SESSION['join'])) {
 					<p class="error">* パスワードを入力してください</p>
 				<?php endif; ?>
 		<dt>写真など</dt>
-		<dd>
+			<dd>
         	<input type="file" name="image" size="35" value="test"  />
-        </dd>
+					<?php if ($error['image'] === 'type'): ?>
+						<p class="error">* 写真などは「.gif」または「.jpg」「.png」の画像を指定してください</p>
+					<?php endif; ?>
+					<?php if (!empty($error)): ?>
+						<p class="error">* 恐れ入りますが、画像を改めて指定してください</p>
+					<?php endif; ?>
+      </dd>
 	</dl>
 	<div><input type="submit" value="入力内容を確認する" /></div>
 </form>
