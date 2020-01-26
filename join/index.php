@@ -1,4 +1,5 @@
 <?php
+session_start();
 
 // if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (!empty($_POST)) {
@@ -16,10 +17,17 @@ if (!empty($_POST)) {
 	}
 	
 	if (empty($error)) {
+		$_SESSION['join'] = $_POST;
 		header('Location: check.php');
 		exit();
 	}	
 }
+
+// 書き直し（urlパラメータ?action=rewite)
+if ($_REQUEST['action'] === 'rewrite' && isset($_SESSION['join'])) {
+	$_POST = $_SESSION['join'];
+}
+
 
 ?>
 <!DOCTYPE html>
