@@ -1,10 +1,30 @@
 <?php
 session_start();
+require('../dbconnect.php');
 
 if (!isset($_SESSION['join'])) {
 	header('Location: index.php');
 	exit();
 }
+
+// 登録するボタンが押された時にDBに登録する
+// 登録ボタン押された時 == 下のform(input type="hidden")送信された時
+if (!empty($_POST)) {
+	$statement = $db->prepare('INSERT INTO members SET name=?, email=?, password=?, picture=?, created=NOW()');
+	$statement->execute(array(
+		$_SESSION['join']['name'],
+		$_SESSION['join']['email'],
+		// パスワードは暗号化
+		sha1($_SESSION['join']['password']),
+		$_SESSION['join']['image']
+	));
+	unset($_SESSION['join']);
+
+	header('Location: thanks.php');
+	exit();
+}
+
+
 ?>
 <!DOCTYPE html>
 <html lang="ja">
