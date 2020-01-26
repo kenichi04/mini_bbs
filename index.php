@@ -34,7 +34,27 @@ if (!empty($_POST)) {
   }
 }
 
-$posts = $db->query('SELECT m.name, m.picture, p.* FROM members m, posts p WHERE m.id=p.member_id ORDER BY p.created DESC');
+
+$page = $_REQUEST['page'];
+if ($page == '') {
+  $page = 1;
+}
+// maxの引数を比べ、大きい方を入れる（マイナスのpage指定を防ぐ）
+$page = max($page, 1);
+
+$counts = $db->query('SELECT COUNT(*) AS cnt FROM posts');
+$cnt = $counts->fetch();
+$maxPage = ceil($cnt['cnt'] / 5);
+$page = min($page, $maxPage);
+
+// urlクエリで受け取ったページ数（page）に5を掛けて、何件目から表示するか計算
+// LIMIT 0,5=> ０(1件目）から５件表示、 LIMIT 5,5 => 5(6件目)から5件表示 
+$start = ($page - 1) * 5;
+
+$posts = $db->prepare('SELECT m.name, m.picture, p.* FROM members m, posts p WHERE m.id=p.member_id ORDER BY p.created DESC LIMIT ?,5');
+// executeの引数として渡すと文字列となるため、bindParamでint指定する
+$posts->bindParam(1, $start, PDO::PARAM_INT);
+$posts->execute();
 
 if (isset($_REQUEST['res'])) {
   // 返信の処理(Re のリンク押下したとき)
@@ -101,8 +121,17 @@ if (isset($_REQUEST['res'])) {
 <?php endforeach; ?>
 
 <ul class="paging">
-<li><a href="index.php?page=">前のページへ</a></li>
-<li><a href="index.php?page=">次のページへ</a></li>
+<?php if ($page > 1): ?>
+  <li><a href="index.php?page=<?php print($page-1); ?>">前のページへ</a></li>
+<?php else: ?>
+  <li>前のページへ</li>
+<?php endif; ?>
+
+<?php if ($page < $maxPage): ?>
+  <li><a href="index.php?page=<?php print($page+1); ?>">次のページへ</a></li>
+<?php else: ?>
+  <li>次のページへ</li>
+<?php endif; ?>
 </ul>
   </div>
 </div>
