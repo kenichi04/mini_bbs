@@ -1,3 +1,40 @@
+<?php
+session_start();
+require('dbconnect.php');
+
+// ログインしている時だけページを表示
+// セッション保存の時間＋1時間が、現在時間より大きい場合
+// => 1時間なにもしないとログアウト扱いにする
+if (isset($_SESSION['id']) && $_SESSION['time'] + 3600 > time()) {
+  $_SESSION['time'] = time();
+
+  $members = $db->prepare('SELECT * FROM members WHERE id=?');
+  $members->execute(array($_SESSION['id']));
+  $member = $members->fetch();
+
+} else {
+  header('Location: login.php');
+  exit();
+}
+
+// 投稿するボタンが押され、form送信されたとき
+if (!empty($_POST)) {
+  if ($_POST['message'] !== '') {
+    $message = $db->prepare('INSERT INTO posts SET member_id=?, message=?, created=NOW()');
+    $message->execute(array(
+      $member['id'],
+      $_POST['message']
+    ));
+    // 再読み込みによるメッセージ投稿の重複をなくす
+    // headerを使うことで、$_POSTが空になる
+    header('Location: index.php');
+    exit();
+  }
+}
+
+$posts = $db->query('SELECT m.name, m.picture, p.* FROM members m, posts p WHERE m.id=p.member_id ORDER BY p.created DESC');
+
+?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -18,7 +55,7 @@
   	<div style="text-align: right"><a href="logout.php">ログアウト</a></div>
     <form action="" method="post">
       <dl>
-        <dt>○○さん、メッセージをどうぞ</dt>
+        <dt><?php print(htmlspecialchars($member['name'], ENT_QUOTES)); ?> さん、メッセージをどうぞ</dt>
         <dd>
           <textarea name="message" cols="50" rows="5"></textarea>
           <input type="hidden" name="reply_post_id" value="" />
@@ -31,16 +68,18 @@
       </div>
     </form>
 
+<?php foreach($posts as $post): ?>
     <div class="msg">
-    <img src="member_picture" width="48" height="48" alt="" />
-    <p><span class="name">（）</span>[<a href="index.php?res=">Re</a>]</p>
-    <p class="day"><a href="view.php?id="></a>
+    <img src="member_picture/<?php print(htmlspecialchars($post['picture'], ENT_QUOTES)); ?>" width="48" height="48" alt="<?php print(htmlspecialchars($post['name'], ENT_QUOTES)); ?>" />
+    <p><?php print(htmlspecialchars($post['message'], ENT_QUOTES)); ?><span class="name">（<?php print(htmlspecialchars($post['name'], ENT_QUOTES)); ?>）</span>[<a href="index.php?res=">Re</a>]</p>
+    <p class="day"><a href="view.php?id="><?php print(htmlspecialchars($post['created'], ENT_QUOTES)); ?></a>
 <a href="view.php?id=">
 返信元のメッセージ</a>
 [<a href="delete.php?id="
 style="color: #F33;">削除</a>]
     </p>
     </div>
+<?php endforeach; ?>
 
 <ul class="paging">
 <li><a href="index.php?page=">前のページへ</a></li>
